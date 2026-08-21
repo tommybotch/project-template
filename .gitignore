@@ -64,3 +64,10 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Agent workspaces
+.worktrees/
+.superpowers/
+
+# graphify knowledge graph (regenerable: graphify . && graphify cluster-only .)
+graphify-out/

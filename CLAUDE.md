@@ -1,45 +1,104 @@
 # [PROJECT_NAME]
 
-## Environment
+## Coding Guidelines
 
-Always activate the project environment before running any scripts:
+Behavioral guidelines that reduce common LLM coding mistakes. Adapted from
+[andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills)
+(MIT), derived from Andrej Karpathy's observations on LLM coding pitfalls.
 
-```bash
-# uv-based (preferred for new projects)
-source .venv/bin/activate
-# or: uv run python script.py
+**Tradeoff:** These bias toward caution over speed. For trivial tasks, use judgment.
 
-# conda-based (legacy)
-conda activate [ENV_NAME]
+### 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them — don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+### 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+### 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+
+When your changes create orphans:
+- Remove imports, variables, and functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: every changed line should trace directly to the request.
+
+### 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
 ```
 
-## RTK Usage
+Strong success criteria let you loop independently. Weak criteria ("make it
+work") require constant clarification.
 
-Always prefix shell commands with `rtk` to reduce token usage by 60-90%:
+## Tooling
+
+Tool conventions — graphify for code exploration, RTK for shell commands — are not
+repeated here. They live once in `~/.claude/CLAUDE.md`, between the markers
+`<!-- claude-tools:start -->` and `<!-- claude-tools:end -->`, written by
+`setup_claude_tools.sh`. To read them:
 
 ```bash
-rtk git status          # compact git status
-rtk git log             # compact log
-rtk ls <path>           # tree format
-rtk grep <pattern>      # grouped search results
+sed -n '/claude-tools:start/,/claude-tools:end/p' ~/.claude/CLAUDE.md
 ```
 
-See the RTK section below for the full command reference.
-
-## Code Exploration Policy
-
-Always use jCodemunch-MCP tools for code exploration — they are faster and use fewer tokens.
-If jCodemunch-MCP is not connected, **stop and diagnose** — do not fall back to Read/Grep/Glob.
-Check `/mcp` in Claude Code; if disconnected, re-run `setup_claude_tools.sh` to re-register.
-
-- Before reading a file: use `get_file_outline` or `get_file_content`
-- Before searching: use `search_symbols` or `search_text`
-- Before exploring structure: use `get_file_tree` or `get_repo_outline`
-- Call `resolve_repo` with the current directory first; if not indexed, call `index_folder`.
+To change them, edit `routing_block_content()` in `setup_claude_tools.sh` and re-run
+it — hand edits between the markers are overwritten. Anything outside the markers is
+preserved across runs.
 
 ## Project Overview
 
 [Brief description of the project's scientific goals and methods.]
+
+## Environment
+
+Activate the project environment before running any script:
+
+```bash
+source .venv/bin/activate
+# or: uv run python script.py
+```
+
+## Tests
+
+```bash
+bash tests/test_setup_claude_tools.sh   # tool setup script; plain bash, no framework
+pytest                                  # project tests, once you add them
+```
 
 ## Project Structure
 
@@ -50,86 +109,35 @@ Check `/mcp` in Claude Code; if disconnected, re-run `setup_claude_tools.sh` to 
 │   ├── notebooks/         # Jupyter notebooks for exploration/visualization
 │   ├── plot/              # Plotting utilities
 │   ├── stats/             # Statistical analysis (Python/R)
-│   ├── submit_scripts/    # HPC job submission scripts (optional — SLURM/dSQ)
-│   │   ├── dsq/           # DSQ shell scripts
+│   ├── submit_scripts/    # HPC job submission (optional — SLURM/dSQ)
+│   │   ├── dsq/           # dSQ shell scripts
 │   │   └── joblists/      # Job list text files
-│   └── utils/             # Shared utility functions
+│   └── utils/             # Shared utilities
 │       └── config.py      # Centralized path configuration
 ├── datasets/              # Symlinks or metadata for raw data
 ├── derivatives/
 │   ├── results/           # Analysis outputs
 │   └── logs/              # Job logs
+├── docs/                  # Design docs and specs
+├── tests/                 # Test suite
+├── setup_claude_tools.sh  # One-time Claude Code tool setup
+├── pyproject.toml         # Dependencies and Python version
 └── README.md
 ```
 
 ## Path Configuration
 
-All paths are centralized in `code/utils/config.py`. Update before running any scripts:
+All paths are centralized in `code/utils/config.py`:
 
-- `BASE_DIR`: project root
-- `DATASETS_DIR`: location of raw data
-- `SCRATCH_DIR`: temporary/intermediate files
+- `BASE_DIR` — project root, auto-detected from the file's location
+- `DATASETS_DIR` — raw data; override with the `DATASETS_DIR` environment variable
+- `SCRATCH_DIR` — intermediate files; uses `$SCRATCH`, then `$TMPDIR`, then `.scratch/`
 
 ## HPC Usage (optional)
 
-If running on an HPC cluster with SLURM and dSQ (Dead Simple Queue), use scripts in
-`code/submit_scripts/`. Skip this section if running locally or on a different scheduler.
+For SLURM clusters with dSQ. Skip when running locally or under another scheduler.
 
 ```bash
-# Submit a dSQ job array
-sbatch code/submit_scripts/dsq/dsq_[analysis].sh
-
-# Check job status
-dsqa -j [JOB_ID]
+sbatch code/submit_scripts/dsq/dsq_[analysis].sh   # submit a dSQ job array
+dsqa -j [JOB_ID]                                   # check status
 ```
-
-<!-- rtk-instructions v2 -->
-# RTK (Rust Token Killer) - Token-Optimized Commands
-
-## Golden Rule
-
-**Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
-
-**Important**: Even in command chains with `&&`, use `rtk`:
-```bash
-# ❌ Wrong
-git add . && git commit -m "msg" && git push
-
-# ✅ Correct
-rtk git add . && rtk git commit -m "msg" && rtk git push
-```
-
-## RTK Commands by Workflow
-
-### Git (59-80% savings)
-```bash
-rtk git status          # Compact status
-rtk git log             # Compact log
-rtk git diff            # Compact diff (80%)
-rtk git add             # Ultra-compact confirmations
-rtk git commit          # Ultra-compact confirmations
-rtk git push / pull     # Ultra-compact confirmations
-```
-
-### Files & Search (60-75% savings)
-```bash
-rtk ls <path>           # Tree format, compact (65%)
-rtk grep <pattern>      # Search grouped by file (75%)
-rtk find <pattern>      # Find grouped by directory (70%)
-```
-
-### Analysis & Debug (70-90% savings)
-```bash
-rtk err <cmd>           # Filter errors only
-rtk log <file>          # Deduplicated logs with counts
-rtk summary <cmd>       # Smart summary of command output
-```
-
-### Meta Commands
-```bash
-rtk gain                # View token savings statistics
-rtk gain --history      # View command history with savings
-```
-
-Overall average: **60-90% token reduction** on common development operations.
-<!-- /rtk-instructions -->
