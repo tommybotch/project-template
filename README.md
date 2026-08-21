@@ -48,8 +48,9 @@ Start with `bash setup_claude_tools.sh --check` to see what it would target.
 
 #### What it changes on your machine
 
-The script writes outside this repo. Everything it touches is user-level, and it
-never modifies the repo's own `.claude/settings.json`.
+The script writes outside this repo. Everything it touches is user-level — it
+never writes project-scoped Claude config, so permissions stay a decision you
+make for your own account rather than something a cloned template grants you.
 
 | Path | What lands there |
 |------|------------------|
